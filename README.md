@@ -12,7 +12,7 @@
 **Event-driven, cloud-native crowd intelligence for 50,000+ capacity sporting venues.**  
 Reduces congestion, minimises wait times, and provides real-time insights to attendees and operators — all running serverlessly on Google Cloud Run.
 
-[Live Demo](https://venueiq.example.com) · [Architecture Docs](#architecture) · [Deployment Guide](#deployment) · [API Reference](#api-reference)
+[Live Demo](https://venueiq-gateway-qfh7vz2kya-uc.a.run.app/) · [Architecture Docs](#architecture) · [Deployment Guide](#deployment) · [API Reference](#api-reference)
 
 </div>
 
