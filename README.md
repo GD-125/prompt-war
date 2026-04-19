@@ -92,21 +92,21 @@ VenueIQ is a production-grade, event-driven microservices platform deployed on *
            (reads)          │
                    ┌────────┴────────┐────────────────────┐
                    │                 │                    │
-        ┌──────────▼──────┐ ┌───────▼──────────┐ ┌──────▼──────────────┐
-        │ crowd-analysis  │ │ queue-routing     │ │ notification-ops    │
-        │ worker          │ │ worker            │ │ worker              │
-        │ Cloud Run       │ │ Cloud Run         │ │ Cloud Run           │
-        │ internal only   │ │ internal only     │ │ internal only       │
-        └──────────┬──────┘ └───────┬──────────┘ └──────┬──────────────┘
+        ┌──────────▼──────┐ ┌────────▼─────────┐ ┌────────▼───────────┐
+        │ crowd-analysis  │ │ queue-routing    │ │ notification-ops   │
+        │ worker          │ │ worker           │ │ worker             │
+        │ Cloud Run       │ │ Cloud Run        │ │ Cloud Run          │
+        │ internal only   │ │ internal only    │ │ internal only      │
+        └──────────┬──────┘ └───────┬──────────┘ └───────┬────────────┘
                    │                │                    │
                    └────────────────┴────────────────────┘
                                     │
                           ┌─────────▼──────────┐
-                          │   Cloud Firestore   │
-                          │   venue_density     │
-                          │   queue_estimates   │
-                          │   routing_cache     │
-                          │   ops_metrics       │
+                          │   Cloud Firestore  │
+                          │   venue_density    │
+                          │   queue_estimates  │
+                          │   routing_cache    │
+                          │   ops_metrics      │
                           └────────────────────┘
 ```
 
@@ -434,35 +434,35 @@ curl -X POST $API_URL/api/v1/location/ping \
 ┌─────────────────────────────────────────────────┐
 │  Layer 1: Network                               │
 │  • Cloud Armor WAF (SQLi, XSS, DDoS)            │
-│  • Rate limiting: 100 req/min per IP             │
-│  • TLS 1.2+ enforced (Cloud Run default)         │
+│  • Rate limiting: 100 req/min per IP            │
+│  • TLS 1.2+ enforced (Cloud Run default)        │
 ├─────────────────────────────────────────────────┤
 │  Layer 2: Identity & Access                     │
-│  • Cloud Run OIDC (workers: internal only)       │
-│  • IAM least-privilege service accounts          │
-│  • Pub/Sub push OIDC token verification          │
+│  • Cloud Run OIDC (workers: internal only)      │
+│  • IAM least-privilege service accounts         │
+│  • Pub/Sub push OIDC token verification         │
 ├─────────────────────────────────────────────────┤
 │  Layer 3: Data Integrity                        │
 │  • HMAC-SHA256 envelope signing (api → workers) │
-│  • Workers reject messages with invalid HMAC     │
+│  • Workers reject messages with invalid HMAC    │
 │  • 200 ACK on tampered messages (no retry loop) │
 ├─────────────────────────────────────────────────┤
 │  Layer 4: Input Validation                      │
-│  • Pydantic strict models on all endpoints       │
+│  • Pydantic strict models on all endpoints      │
 │  • Control character stripping                  │
-│  • Safe-character regex on all ID fields         │
+│  • Safe-character regex on all ID fields        │
 │  • Payload size limits (1MB cap)                │
 ├─────────────────────────────────────────────────┤
 │  Layer 5: Secrets                               │
 │  • All keys in Secret Manager (never in env)    │
-│  • Rotation supported via Secret Manager         │
-│  • Container images never embed secrets          │
+│  • Rotation supported via Secret Manager        │
+│  • Container images never embed secrets         │
 ├─────────────────────────────────────────────────┤
 │  Layer 6: Runtime                               │
-│  • Non-root container user (UID 10001)           │
-│  • Read-only filesystem in runtime stage         │
+│  • Non-root container user (UID 10001)          │
+│  • Read-only filesystem in runtime stage        │
 │  • Security response headers on every response  │
-│  • Docs endpoints disabled in production         │
+│  • Docs endpoints disabled in production        │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -764,5 +764,5 @@ Built with:
 ---
 
 <div align="center">
-Made with ☁️ on Google Cloud · <a href="https://github.com/your-org/venueiq">github.com/your-org/venueiq</a>
+Made with ☁️ on Google Cloud · <a href="https://github.com/GD-125/prompt-war">github.com/GD-125/prompt-war</a>
 </div>
