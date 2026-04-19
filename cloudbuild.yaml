@@ -1,0 +1,206 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# VenueIQ — Cloud Build CI/CD Pipeline
+# Triggered on push to main branch via Cloud Build trigger
+# Runs: lint → test → build → push → blue/green deploy → smoke test
+# ══════════════════════════════════════════════════════════════════════════════
+
+steps:
+
+# ── 1. Lint ────────────────────────────────────────────────────────────────────
+- name: 'python:3.12-slim'
+  id: lint
+  entrypoint: bash
+  args:
+    - '-c'
+    - |
+      pip install ruff --quiet
+      ruff check services/ ml/ --select E,W,F --ignore E501
+      echo "✓ Lint passed"
+
+# ── 2. Unit Tests ─────────────────────────────────────────────────────────────
+- name: 'python:3.12-slim'
+  id: test
+  entrypoint: bash
+  waitFor: [lint]
+  args:
+    - '-c'
+    - |
+      pip install -r requirements.txt pytest pytest-asyncio --quiet
+      pytest tests/ -v --tb=short
+      echo "✓ Tests passed"
+  env:
+    - 'GCP_PROJECT_ID=venueiq-test'
+    - 'TESTING=true'
+
+# ── 3. Build & Push — API Service ────────────────────────────────────────────
+- name: 'gcr.io/cloud-builders/docker'
+  id: build-api
+  waitFor: [test]
+  args:
+    - build
+    - --platform=linux/amd64
+    - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-api:$SHORT_SHA
+    - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-api:latest
+    - --cache-from=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-api:latest
+    - --file=Dockerfile
+    - services/api-service
+
+- name: 'gcr.io/cloud-builders/docker'
+  id: push-api
+  waitFor: [build-api]
+  args:
+    - push
+    - --all-tags
+    - $_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-api
+
+# ── 4. Build & Push — Workers (parallel) ──────────────────────────────────────
+- name: 'gcr.io/cloud-builders/docker'
+  id: build-crowd
+  waitFor: [test]
+  args:
+    - build
+    - --platform=linux/amd64
+    - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-crowd-worker:$SHORT_SHA
+    - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-crowd-worker:latest
+    - --cache-from=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-crowd-worker:latest
+    - --file=Dockerfile
+    - services/crowd-analysis-worker
+
+- name: 'gcr.io/cloud-builders/docker'
+  id: build-queue
+  waitFor: [test]
+  args:
+    - build
+    - --platform=linux/amd64
+    - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-queue-routing-worker:$SHORT_SHA
+    - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-queue-routing-worker:latest
+    - --cache-from=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-queue-routing-worker:latest
+    - --file=Dockerfile
+    - services/queue-routing-worker
+
+- name: 'gcr.io/cloud-builders/docker'
+  id: build-notif
+  waitFor: [test]
+  args:
+    - build
+    - --platform=linux/amd64
+    - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-notification-ops-worker:$SHORT_SHA
+    - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-notification-ops-worker:latest
+    - --cache-from=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-notification-ops-worker:latest
+    - --file=Dockerfile
+    - services/notification-ops-worker
+
+- name: 'gcr.io/cloud-builders/docker'
+  id: build-ml
+  waitFor: [test]
+  args:
+    - build
+    - --platform=linux/amd64
+    - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-ml-service:$SHORT_SHA
+    - --tag=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-ml-service:latest
+    - --cache-from=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-ml-service:latest
+    - --file=Dockerfile
+    - services/ml-prediction-service
+
+# Push all worker images
+- name: 'gcr.io/cloud-builders/docker'
+  id: push-workers
+  waitFor: [build-crowd, build-queue, build-notif, build-ml]
+  entrypoint: bash
+  args:
+    - '-c'
+    - |
+      for svc in venueiq-crowd-worker venueiq-queue-routing-worker venueiq-notification-ops-worker venueiq-ml-service; do
+        docker push --all-tags $_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/$svc
+      done
+
+# ── 5. Blue/Green Deploy — Canary (5% traffic) ───────────────────────────────
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  id: deploy-canary
+  waitFor: [push-api, push-workers]
+  entrypoint: bash
+  args:
+    - '-c'
+    - |
+      set -e
+
+      # Deploy new revision with no traffic
+      gcloud run deploy venueiq-api \
+        --image=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/venueiq-api:$SHORT_SHA \
+        --region=$_REGION --project=$PROJECT_ID \
+        --no-traffic --tag=canary-$SHORT_SHA --quiet
+
+      # Deploy workers (they are push-only, no traffic splitting needed)
+      for svc in venueiq-crowd-worker venueiq-queue-routing-worker venueiq-notification-ops-worker venueiq-ml-service; do
+        IMAGE=$(echo $svc | sed 's/venueiq-//')
+        gcloud run deploy $svc \
+          --image=$_REGION-docker.pkg.dev/$PROJECT_ID/venueiq/$svc:$SHORT_SHA \
+          --region=$_REGION --project=$PROJECT_ID --quiet
+      done
+
+      # Route 5% of production traffic to canary
+      gcloud run services update-traffic venueiq-api \
+        --region=$_REGION --project=$PROJECT_ID \
+        --to-tags=canary-$SHORT_SHA=5 --quiet
+
+      echo "✓ Canary deployed at 5% traffic"
+
+# ── 6. Smoke Test ──────────────────────────────────────────────────────────────
+- name: 'curlimages/curl:8.6.0'
+  id: smoke-test
+  waitFor: [deploy-canary]
+  entrypoint: sh
+  args:
+    - '-c'
+    - |
+      API_URL=$(gcloud run services describe venueiq-api \
+        --region=$_REGION --project=$PROJECT_ID \
+        --format='value(status.url)')
+
+      echo "Testing $API_URL ..."
+
+      # Health check
+      STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/health")
+      [ "$STATUS" = "200" ] || { echo "Health check failed: $STATUS"; exit 1; }
+
+      # Ready check
+      STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/ready")
+      [ "$STATUS" = "200" ] || { echo "Ready check failed: $STATUS"; exit 1; }
+
+      # Density endpoint
+      STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/api/v1/venue/venue_001/density")
+      [ "$STATUS" = "200" ] || [ "$STATUS" = "404" ] || { echo "Density check failed: $STATUS"; exit 1; }
+
+      echo "✓ Smoke tests passed"
+
+# ── 7. Promote to 100% ────────────────────────────────────────────────────────
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  id: promote
+  waitFor: [smoke-test]
+  entrypoint: bash
+  args:
+    - '-c'
+    - |
+      gcloud run services update-traffic venueiq-api \
+        --region=$_REGION --project=$PROJECT_ID \
+        --to-latest --quiet
+      echo "✓ Traffic promoted to 100% — deploy complete"
+      echo "SHA: $SHORT_SHA | $(date -u)"
+
+# ── Substitutions ──────────────────────────────────────────────────────────────
+substitutions:
+  _REGION: us-central1
+
+# ── Options ───────────────────────────────────────────────────────────────────
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+  substitutionOption: ALLOW_LOOSE
+
+timeout: 1800s
+
+# ── Artifacts (store test results) ───────────────────────────────────────────
+artifacts:
+  objects:
+    location: 'gs://$PROJECT_ID-build-artifacts/$SHORT_SHA/'
+    paths: ['test-results/**']

@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VenueIQ — Venue Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #060810;
+    --surface: #0d1117;
+    --surface2: #151b26;
+    --border: #1e2d42;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --accent3: #7c3aed;
+    --green: #10b981;
+    --yellow: #f59e0b;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --glow: 0 0 20px rgba(0,229,255,0.3);
+    --glow-red: 0 0 20px rgba(239,68,68,0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .grid-bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .scanline {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: repeating-linear-gradient(
+      0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px
+    );
+  }
+
+  /* ── Header ── */
+  header {
+    position: relative; z-index: 10;
+    padding: 20px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: rgba(6,8,16,0.95);
+    backdrop-filter: blur(10px);
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--glow);
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 15px rgba(0,229,255,0.3); }
+    50% { box-shadow: 0 0 30px rgba(0,229,255,0.7), 0 0 60px rgba(0,229,255,0.2); }
+  }
+
+  .logo h1 {
+    font-size: 22px; font-weight: 800;
+    letter-spacing: 2px; color: var(--text);
+  }
+
+  .logo span { color: var(--accent); }
+
+  .live-badge {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    padding: 6px 14px; border-radius: 20px;
+    font-family: 'Space Mono', monospace; font-size: 11px;
+    color: var(--green); letter-spacing: 1px;
+  }
+
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    animation: blink 1.2s ease-in-out infinite;
+  }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+
+  .nav-tabs {
+    display: flex; gap: 4px;
+    background: var(--surface); border-radius: 8px; padding: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .tab {
+    padding: 8px 18px; border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 700; letter-spacing: 0.5px;
+    border: none; background: transparent; color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--accent); color: var(--bg);
+  }
+
+  /* ── Panels ── */
+  .panel {
+    display: none; position: relative; z-index: 5;
+    padding: 28px 32px; min-height: calc(100vh - 80px);
+  }
+  .panel.active { display: block; }
+
+  /* ── Architecture Diagram ── */
+  .arch-container {
+    max-width: 1200px; margin: 0 auto;
+  }
+
+  .arch-title {
+    font-size: 13px; font-family: 'Space Mono', monospace;
+    color: var(--accent); letter-spacing: 2px; margin-bottom: 24px;
+    text-transform: uppercase;
+  }
+
+  .arch-diagram {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    overflow: hidden;
+  }
+
+  .arch-diagram::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0,229,255,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  /* Layers */
+  .layer {
+    display: flex; align-items: center;
+    gap: 16px; margin-bottom: 20px;
+  }
+
+  .layer-label {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase;
+    writing-mode: vertical-rl; transform: rotate(180deg);
+    min-width: 60px; text-align: center;
+  }
+
+  .layer-content {
+    flex: 1; display: flex; gap: 12px; align-items: center;
+  }
+
+  .node {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+
+  .node:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px rgba(0,229,255,0.15);
+    transform: translateY(-2px);
+  }
+
+  .node.highlight-blue { border-color: rgba(0,229,255,0.5); }
+  .node.highlight-orange { border-color: rgba(255,107,53,0.5); }
+  .node.highlight-purple { border-color: rgba(124,58,237,0.5); }
+  .node.highlight-green { border-color: rgba(16,185,129,0.5); }
+
+  .node-icon {
+    font-size: 22px; margin-bottom: 8px;
+  }
+
+  .node-title {
+    font-size: 13px; font-weight: 700; margin-bottom: 4px;
+  }
+
+  .node-subtitle {
+    font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace;
+  }
+
+  .node-tag {
+    position: absolute; top: 10px; right: 10px;
+    font-size: 9px; font-family: 'Space Mono', monospace;
+    padding: 2px 7px; border-radius: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  .tag-run { background: rgba(0,229,255,0.15); color: var(--accent); }
+  .tag-gcp { background: rgba(255,107,53,0.15); color: var(--accent2); }
+  .tag-db { background: rgba(124,58,237,0.15); color: #a78bfa; }
+
+  /* Flow arrows */
+  .flow-arrow {
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent); font-size: 20px;
+    position: relative; padding: 8px 0;
+  }
+
+  .flow-line {
+    width: 2px; height: 30px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    margin: 0 auto;
+    position: relative;
+    animation: flow-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes flow-pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .flow-label {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    color: var(--accent); text-align: center; margin-bottom: 4px;
+    letter-spacing: 1px;
+  }
+
+  /* ── Specs Grid ── */
+  .specs-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px; margin-top: 24px;
+  }
+
+  .spec-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+
+  .spec-card h3 {
+    font-size: 13px; font-weight: 700; margin-bottom: 12px;
+    color: var(--accent); letter-spacing: 1px;
+  }
+
+  .spec-item {
+    display: flex; justify-content: space-between;
+    padding: 7px 0; border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+
+  .spec-item:last-child { border-bottom: none; }
+
+  .spec-item .key { color: var(--muted); font-family: 'Space Mono', monospace; }
+  .spec-item .val { font-weight: 700; color: var(--text); font-size: 11px; }
+  .spec-item .val.good { color: var(--green); }
+  .spec-item .val.warn { color: var(--yellow); }
+
+  /* ── Dashboard ── */
+  .dash-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+
+  .dash-title { font-size: 28px; font-weight: 800; }
+  .dash-subtitle { font-size: 13px; color: var(--muted); margin-top: 4px;
+    font-family: 'Space Mono', monospace; }
+
+  .venue-selector {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); padding: 8px 14px; border-radius: 8px;
+    font-family: 'Syne', sans-serif; font-size: 13px; cursor: pointer;
+  }
+
+  /* KPI Row */
+  .kpi-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px;
+    position: relative; overflow: hidden;
+    transition: all 0.3s;
+  }
+
+  .kpi-card::before {
+    content: ''; position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+  }
+
+  .kpi-card.blue::before { background: var(--accent); }
+  .kpi-card.orange::before { background: var(--accent2); }
+  .kpi-card.green::before { background: var(--green); }
+  .kpi-card.purple::before { background: var(--accent3); }
+
+  .kpi-label {
+    font-size: 11px; color: var(--muted); letter-spacing: 1px;
+    text-transform: uppercase; font-family: 'Space Mono', monospace;
+    margin-bottom: 10px;
+  }
+
+  .kpi-value {
+    font-size: 36px; font-weight: 800; line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .kpi-card.blue .kpi-value { color: var(--accent); }
+  .kpi-card.orange .kpi-value { color: var(--accent2); }
+  .kpi-card.green .kpi-value { color: var(--green); }
+  .kpi-card.purple .kpi-value { color: #a78bfa; }
+
+  .kpi-delta {
+    font-size: 11px; font-family: 'Space Mono', monospace;
+  }
+
+  .kpi-delta.up { color: var(--red); }
+  .kpi-delta.down { color: var(--green); }
+
+  /* Main Grid */
+  .main-grid {
+    display: grid; grid-template-columns: 1fr 1fr 340px; gap: 16px;
+  }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+
+  .card-title {
+    font-size: 13px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .card-title .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  /* Density Map */
+  .density-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+
+  .zone-tile {
+    background: var(--surface2); border-radius: 8px;
+    padding: 12px; position: relative;
+    border: 1px solid transparent;
+    transition: all 0.4s;
+    cursor: pointer;
+  }
+
+  .zone-tile.low { border-color: rgba(16,185,129,0.3); }
+  .zone-tile.moderate { border-color: rgba(245,158,11,0.3); }
+  .zone-tile.high { border-color: rgba(249,115,22,0.4); }
+  .zone-tile.critical {
+    border-color: rgba(239,68,68,0.6);
+    box-shadow: 0 0 16px rgba(239,68,68,0.2);
+    animation: critical-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes critical-pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(239,68,68,0.2); }
+    50% { box-shadow: 0 0 20px rgba(239,68,68,0.5); }
+  }
+
+  .zone-name {
+    font-size: 11px; color: var(--muted);
+    font-family: 'Space Mono', monospace; margin-bottom: 8px;
+  }
+
+  .zone-count { font-size: 22px; font-weight: 800; }
+  .zone-bar { height: 4px; border-radius: 2px; background: var(--border); margin-top: 8px; }
+  .zone-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+  .zone-tile.low .zone-fill { background: var(--green); }
+  .zone-tile.moderate .zone-fill { background: var(--yellow); }
+  .zone-tile.high .zone-fill { background: #f97316; }
+  .zone-tile.critical .zone-fill { background: var(--red); }
+
+  .zone-status {
+    font-size: 9px; font-family: 'Space Mono', monospace;
+    letter-spacing: 1px; margin-top: 4px;
+  }
+
+  .zone-tile.low .zone-status { color: var(--green); }
+  .zone-tile.moderate .zone-status { color: var(--yellow); }
+  .zone-tile.high .zone-status { color: #f97316; }
+  .zone-tile.critical .zone-status { color: var(--red); }
+
+  /* Queue Panel */
+  .queue-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .queue-item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface2); border-radius: 8px; padding: 12px;
+    border: 1px solid var(--border);
+  }
+
+  .queue-icon { font-size: 18px; }
+
+  .queue-info { flex: 1; }
+  .queue-name { font-size: 12px; font-weight: 700; }
+  .queue-loc { font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+  .queue-time {
+    text-align: right;
+  }
+
+  .queue-minutes {
+    font-size: 20px; font-weight: 800; font-family: 'Space Mono', monospace;
+  }
+
+  .queue-minutes.ok { color: var(--green); }
+  .queue-minutes.warn { color: var(--yellow); }
+  .queue-minutes.bad { color: var(--red); }
+
+  .queue-unit { font-size: 10px; color: var(--muted); }
+
+  /* Ops Sidebar */
+  .ops-sidebar { display: flex; flex-direction: column; gap: 12px; }
+
+  .health-score {
+    text-align: center; padding: 20px;
+    background: var(--surface2); border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .health-ring {
+    position: relative; width: 100px; height: 100px;
+    margin: 0 auto 12px;
+  }
+
+  .health-ring svg { transform: rotate(-90deg); }
+
+  .health-ring-num {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; font-weight: 800; color: var(--green);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .health-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+
+  /* Recommendations */
+  .rec-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .rec-item {
+    background: var(--surface2); border-radius: 8px; padding: 12px;
+    border-left: 3px solid transparent;
+    font-size: 12px; line-height: 1.5;
+  }
+
+  .rec-item.urgent { border-color: var(--red); }
+  .rec-item.high { border-color: var(--yellow); }
+  .rec-item.medium { border-color: var(--accent); }
+
+  .rec-priority {
+    font-size: 9px; font-family: 'Space Mono', monospace;
+    letter-spacing: 1px; margin-bottom: 4px;
+  }
+
+  .rec-item.urgent .rec-priority { color: var(--red); }
+  .rec-item.high .rec-priority { color: var(--yellow); }
+  .rec-item.medium .rec-priority { color: var(--accent); }
+
+  /* Event log */
+  .event-log {
+    height: 200px; overflow-y: auto;
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    line-height: 1.8;
+  }
+
+  .event-log::-webkit-scrollbar { width: 4px; }
+  .event-log::-webkit-scrollbar-track { background: var(--surface2); }
+  .event-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .log-line { color: var(--muted); }
+  .log-line span { 
+    display: inline-block; padding: 0 6px; border-radius: 3px;
+    margin-right: 6px; font-size: 9px;
+  }
+
+  .log-time { color: var(--accent); }
+  .log-event { background: rgba(0,229,255,0.1); color: var(--accent); }
+  .log-warn { background: rgba(245,158,11,0.1); color: var(--yellow); }
+  .log-error { background: rgba(239,68,68,0.1); color: var(--red); }
+  .log-ok { background: rgba(16,185,129,0.1); color: var(--green); }
+
+  /* Event Schema Panel */
+  .schema-container { max-width: 1000px; }
+
+  .schema-flow {
+    display: flex; align-items: stretch; gap: 0;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden; margin-bottom: 24px;
+  }
+
+  .schema-step {
+    flex: 1; padding: 20px;
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+
+  .schema-step:last-child { border-right: none; }
+
+  .schema-step::after {
+    content: '→';
+    position: absolute; right: -12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent); font-size: 16px; z-index: 2;
+  }
+
+  .schema-step:last-child::after { display: none; }
+
+  .step-num {
+    font-size: 10px; font-family: 'Space Mono', monospace;
+    color: var(--muted); margin-bottom: 8px; letter-spacing: 1px;
+  }
+
+  .step-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+  .step-detail { font-size: 11px; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+  .code-block {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px;
+    font-family: 'Space Mono', monospace; font-size: 12px;
+    line-height: 1.7; overflow-x: auto;
+    margin-bottom: 16px;
+  }
+
+  .code-block .c-key { color: #7dd3fc; }
+  .code-block .c-str { color: #86efac; }
+  .code-block .c-num { color: #fca5a5; }
+  .code-block .c-muted { color: var(--muted); }
+  .code-block .c-type { color: #c084fc; }
+
+  /* Responsive tweaks */
+  @media (max-width: 1100px) {
+    .main-grid { grid-template-columns: 1fr 1fr; }
+    .ops-sidebar { grid-column: 1 / -1; flex-direction: row; }
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 700px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    header { flex-wrap: wrap; gap: 12px; }
+    .nav-tabs { order: 3; width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<div class="scanline"></div>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon"></div>
+    <h1>VENUE<span>IQ</span></h1>
+  </div>
+
+  <div class="nav-tabs">
+    <button class="tab" onclick="window.location.href='venueiq-digital-twin.html'" style="color: var(--bg); background: var(--accent); border: 1px solid var(--accent); box-shadow: var(--glow);">Digital Twin ↗</button>
+    <button class="tab active" onclick="showPanel('arch')">Architecture</button>
+    <button class="tab" onclick="showPanel('dashboard')">Live Dashboard</button>
+    <button class="tab" onclick="showPanel('schema')">Event Schema</button>
+    <button class="tab" onclick="showPanel('deploy')">Deployment</button>
+  </div>
+
+  <div class="live-badge">
+    <div class="live-dot"></div>
+    LIVE SIMULATION
+  </div>
+</header>
+
+<!-- ══ ARCHITECTURE PANEL ══════════════════════════════════════════════════ -->
+<div class="panel active" id="panel-arch">
+  <div class="arch-container">
+    <div class="arch-title">// Cloud-Native Architecture — Google Cloud Run</div>
+
+    <div class="arch-diagram">
+
+      <!-- Layer 1: Clients -->
+      <div class="layer">
+        <div class="layer-label">CLIENTS</div>
+        <div class="layer-content">
+          <div class="node highlight-blue" style="max-width:180px">
+            <div class="node-icon">📱</div>
+            <div class="node-title">Mobile App</div>
+            <div class="node-subtitle">iOS / Android<br>Offline-first PWA</div>
+          </div>
+          <div class="node highlight-blue" style="max-width:180px">
+            <div class="node-icon">🌐</div>
+            <div class="node-title">Web Dashboard</div>
+            <div class="node-subtitle">Ops staff UI<br>Real-time metrics</div>
+          </div>
+          <div class="node highlight-orange" style="max-width:180px">
+            <div class="node-icon">📡</div>
+            <div class="node-title">IoT Sensors</div>
+            <div class="node-subtitle">Infrared / CV<br>WiFi probes</div>
+          </div>
+          <div class="node highlight-orange" style="max-width:180px">
+            <div class="node-icon">🔌</div>
+            <div class="node-title">Partner APIs</div>
+            <div class="node-subtitle">Ticketing / POS<br>Parking systems</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="flow-arrow">
+        <div>
+          <div class="flow-label">HTTPS / WebSocket</div>
+          <div class="flow-line"></div>
+        </div>
+      </div>
+
+      <!-- Layer 2: API -->
+      <div class="layer">
+        <div class="layer-label">API LAYER</div>
+        <div class="layer-content">
+          <div class="node highlight-blue" style="flex: 2">
+            <div class="node-tag tag-run">Cloud Run</div>
+            <div class="node-icon">⚡</div>
+            <div class="node-title">venueiq-api</div>
+            <div class="node-subtitle">FastAPI · 2 min-instances · 1000 concurrency<br>
+              Validates requests · Publishes events · Serves Firestore data<br>
+              &lt;100ms p99 for write paths · &lt;200ms for reads
+            </div>
+          </div>
+          <div class="node highlight-green" style="max-width:220px">
+            <div class="node-tag tag-gcp">Cloud CDN</div>
+            <div class="node-icon">🛡️</div>
+            <div class="node-title">Cloud Armor + LB</div>
+            <div class="node-subtitle">DDoS protection<br>Rate limiting<br>Global load balancing</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="flow-arrow">
+        <div>
+          <div class="flow-label">Publish Events</div>
+          <div class="flow-line"></div>
+        </div>
+      </div>
+
+      <!-- Layer 3: Pub/Sub -->
+      <div class="layer">
+        <div class="layer-label">EVENT BUS</div>
+        <div class="layer-content">
+          <div class="node highlight-orange" style="flex: 1">
+            <div class="node-tag tag-gcp">Pub/Sub</div>
+            <div class="node-icon">📨</div>
+            <div class="node-title">venue-events</div>
+            <div class="node-subtitle">10min retention · Dead-letter queue<br>
+              Push subscriptions → Workers<br>
+              5 retry attempts · 600s max backoff
+            </div>
+          </div>
+          <div class="node highlight-orange" style="flex: 1">
+            <div class="node-tag tag-gcp">Pub/Sub</div>
+            <div class="node-icon">🔔</div>
+            <div class="node-title">venue-notifications</div>
+            <div class="node-subtitle">24h retention<br>FCM push delivery<br>In-app + SMS channels</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="flow-arrow">
+        <div>
+          <div class="flow-label">Push Subscriptions</div>
+          <div class="flow-line"></div>
+        </div>
+      </div>
+
+      <!-- Layer 4: Workers -->
+      <div class="layer">
+        <div class="layer-label">WORKERS</div>
+        <div class="layer-content">
+          <div class="node highlight-purple">
+            <div class="node-tag tag-run">Cloud Run</div>
+            <div class="node-icon">👁️</div>
+            <div class="node-title">Crowd Analysis</div>
+            <div class="node-subtitle">Transactional zone counters<br>Density classification<br>Critical zone detection</div>
+          </div>
+          <div class="node highlight-purple">
+            <div class="node-tag tag-run">Cloud Run</div>
+            <div class="node-icon">🗺️</div>
+            <div class="node-title">Queue + Routing</div>
+            <div class="node-subtitle">M/M/c queue model<br>Dijkstra + congestion weights<br>Route cache precompute</div>
+          </div>
+          <div class="node highlight-purple">
+            <div class="node-tag tag-run">Cloud Run</div>
+            <div class="node-icon">🔔</div>
+            <div class="node-title">Notification + Ops</div>
+            <div class="node-subtitle">FCM push dispatch<br>Ops metrics aggregation<br>Recommendation engine</div>
+          </div>
+          <div class="node highlight-green">
+            <div class="node-tag tag-gcp">Vertex AI</div>
+            <div class="node-icon">🧠</div>
+            <div class="node-title">ML Predictor</div>
+            <div class="node-subtitle">Crowd movement forecast<br>Halftime rush prediction<br>Personalization model</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Arrow -->
+      <div class="flow-arrow">
+        <div>
+          <div class="flow-label">Read / Write</div>
+          <div class="flow-line"></div>
+        </div>
+      </div>
+
+      <!-- Layer 5: Data -->
+      <div class="layer">
+        <div class="layer-label">DATA</div>
+        <div class="layer-content">
+          <div class="node highlight-green" style="flex: 2">
+            <div class="node-tag tag-db">Firestore</div>
+            <div class="node-icon">🗄️</div>
+            <div class="node-title">Cloud Firestore</div>
+            <div class="node-subtitle">venue_density · queue_estimates · routing_cache<br>
+              user_sessions · ops_metrics · notifications<br>
+              Real-time listeners · TTL on idempotency collections
+            </div>
+          </div>
+          <div class="node highlight-green">
+            <div class="node-tag tag-gcp">Redis</div>
+            <div class="node-icon">⚡</div>
+            <div class="node-title">Memorystore</div>
+            <div class="node-subtitle">Hot density data<br>Rate limit counters<br>&lt;1ms read latency</div>
+          </div>
+          <div class="node highlight-green">
+            <div class="node-tag tag-gcp">BigQuery</div>
+            <div class="node-icon">📊</div>
+            <div class="node-title">Analytics Store</div>
+            <div class="node-subtitle">Historical events<br>ML training data<br>Post-event analysis</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /arch-diagram -->
+
+    <div class="specs-grid">
+      <div class="spec-card">
+        <h3>SCALABILITY</h3>
+        <div class="spec-item"><span class="key">Concurrent users</span><span class="val good">100,000+</span></div>
+        <div class="spec-item"><span class="key">API max instances</span><span class="val">100 (auto)</span></div>
+        <div class="spec-item"><span class="key">Worker max instances</span><span class="val">50 per service</span></div>
+        <div class="spec-item"><span class="key">Pub/Sub throughput</span><span class="val good">10M msg/day</span></div>
+        <div class="spec-item"><span class="key">Scale-to-zero</span><span class="val good">Workers: YES</span></div>
+      </div>
+      <div class="spec-card">
+        <h3>LATENCY TARGETS</h3>
+        <div class="spec-item"><span class="key">Location ping</span><span class="val good">&lt;100ms p99</span></div>
+        <div class="spec-item"><span class="key">Density read</span><span class="val good">&lt;200ms p99</span></div>
+        <div class="spec-item"><span class="key">Route compute</span><span class="val good">&lt;800ms</span></div>
+        <div class="spec-item"><span class="key">Worker processing</span><span class="val good">&lt;2s e2e</span></div>
+        <div class="spec-item"><span class="key">Push notification</span><span class="val good">&lt;3s delivery</span></div>
+      </div>
+      <div class="spec-card">
+        <h3>RESILIENCE</h3>
+        <div class="spec-item"><span class="key">Worker idempotency</span><span class="val good">SHA-256 dedup</span></div>
+        <div class="spec-item"><span class="key">Pub/Sub retries</span><span class="val">5 attempts</span></div>
+        <div class="spec-item"><span class="key">Dead-letter queue</span><span class="val good">YES</span></div>
+        <div class="spec-item"><span class="key">Firestore transactions</span><span class="val good">YES</span></div>
+        <div class="spec-item"><span class="key">Multi-region</span><span class="val warn">Phase 2</span></div>
+      </div>
+      <div class="spec-card">
+        <h3>SECURITY</h3>
+        <div class="spec-item"><span class="key">Service auth</span><span class="val good">IAM + OIDC</span></div>
+        <div class="spec-item"><span class="key">Pub/Sub push auth</span><span class="val good">SA token</span></div>
+        <div class="spec-item"><span class="key">Worker ingress</span><span class="val good">Internal only</span></div>
+        <div class="spec-item"><span class="key">User IDs</span><span class="val good">Anonymized</span></div>
+        <div class="spec-item"><span class="key">Encryption at rest</span><span class="val good">AES-256</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DASHBOARD PANEL ══════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-dashboard">
+  <div class="dash-header">
+    <div>
+      <div class="dash-title">Operations Dashboard</div>
+      <div class="dash-subtitle" id="dash-time">// LOADING...</div>
+    </div>
+    <select class="venue-selector">
+      <option>🏟 Wembley Stadium — FA Cup Final</option>
+      <option>🏈 SoFi Stadium — Super Bowl</option>
+      <option>⚽ Camp Nou — El Clásico</option>
+    </select>
+  </div>
+
+  <div class="kpi-row">
+    <div class="kpi-card blue">
+      <div class="kpi-label">Total Occupancy</div>
+      <div class="kpi-value" id="kpi-occupancy">0</div>
+      <div class="kpi-delta up" id="kpi-occ-delta">▲ loading...</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Max Queue Wait</div>
+      <div class="kpi-value" id="kpi-queue">0<span style="font-size:18px">min</span></div>
+      <div class="kpi-delta" id="kpi-q-delta">loading...</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Venue Health Score</div>
+      <div class="kpi-value" id="kpi-health">100</div>
+      <div class="kpi-delta down" id="kpi-h-delta">/ 100</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Active Alerts</div>
+      <div class="kpi-value" id="kpi-alerts">0</div>
+      <div class="kpi-delta" id="kpi-a-delta">loading...</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <!-- Density Map -->
+    <div class="card">
+      <div class="card-title"><div class="dot"></div>Zone Density Map</div>
+      <div class="density-grid" id="density-grid">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+    <!-- Queue Times -->
+    <div class="card">
+      <div class="card-title"><div class="dot" style="background:var(--accent2);box-shadow:0 0 8px var(--accent2)"></div>Queue Estimates</div>
+      <div class="queue-list" id="queue-list"></div>
+    </div>
+
+    <!-- Ops Sidebar -->
+    <div class="ops-sidebar">
+      <div class="card">
+        <div class="card-title"><div class="dot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></div>Health</div>
+        <div class="health-score">
+          <div class="health-ring">
+            <svg width="100" height="100" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="var(--border)" stroke-width="8"/>
+              <circle cx="50" cy="50" r="42" fill="none" stroke="var(--green)" stroke-width="8"
+                stroke-dasharray="264" id="health-ring-circle" stroke-dashoffset="264"
+                stroke-linecap="round"/>
+            </svg>
+            <div class="health-ring-num" id="health-ring-num">-</div>
+          </div>
+          <div class="health-label">VENUE HEALTH</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><div class="dot" style="background:var(--yellow);box-shadow:0 0 8px var(--yellow)"></div>Ops Actions</div>
+        <div class="rec-list" id="rec-list"></div>
+      </div>
+
+      <div class="card" style="flex:1">
+        <div class="card-title"><div class="dot" style="background:var(--accent3);box-shadow:0 0 8px var(--accent3)"></div>Event Stream</div>
+        <div class="event-log" id="event-log"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCHEMA PANEL ═════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-schema">
+  <div class="schema-container">
+    <div class="arch-title">// Event Schema Design — Pub/Sub Message Format</div>
+
+    <div class="schema-flow">
+      <div class="schema-step">
+        <div class="step-num">01 / CLIENT</div>
+        <div class="step-name">📱 Location Ping</div>
+        <div class="step-detail">POST /api/v1/location/ping<br>Every 30 seconds</div>
+      </div>
+      <div class="schema-step">
+        <div class="step-num">02 / API</div>
+        <div class="step-name">⚡ Wrap + Publish</div>
+        <div class="step-detail">Adds event_id, timestamp<br>Publishes to Pub/Sub</div>
+      </div>
+      <div class="schema-step">
+        <div class="step-num">03 / PUB/SUB</div>
+        <div class="step-name">📨 Fan-out</div>
+        <div class="step-detail">3 push subscriptions<br>Parallel delivery</div>
+      </div>
+      <div class="schema-step">
+        <div class="step-num">04 / WORKER</div>
+        <div class="step-name">🔄 Process</div>
+        <div class="step-detail">Idempotency check<br>Update Firestore</div>
+      </div>
+      <div class="schema-step">
+        <div class="step-num">05 / API</div>
+        <div class="step-name">📊 Serve</div>
+        <div class="step-detail">GET /density<br>Fresh from Firestore</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <div class="arch-title" style="font-size:11px;margin-bottom:12px">// USER_LOCATION_UPDATE</div>
+        <div class="code-block">
+{<br>
+&nbsp;&nbsp;<span class="c-key">"event_id"</span>: <span class="c-str">"3f2a1b4c-5d6e-..."</span>,<br>
+&nbsp;&nbsp;<span class="c-key">"event_type"</span>: <span class="c-str">"USER_LOCATION_UPDATE"</span>,<br>
+&nbsp;&nbsp;<span class="c-key">"timestamp"</span>: <span class="c-str">"2026-04-15T19:45:32Z"</span>,<br>
+&nbsp;&nbsp;<span class="c-key">"source"</span>: <span class="c-str">"api-service"</span>,<br>
+&nbsp;&nbsp;<span class="c-key">"schema_version"</span>: <span class="c-str">"1.0"</span>,<br>
+&nbsp;&nbsp;<span class="c-key">"payload"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"user_id"</span>: <span class="c-str">"usr_anon_a1b2c3"</span>, <span class="c-muted">// hashed</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"venue_id"</span>: <span class="c-str">"venue_001"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"zone_id"</span>: <span class="c-str">"main_concourse_n"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"lat"</span>: <span class="c-num">51.5555</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"lng"</span>: <span class="c-num">-0.1234</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"accuracy_m"</span>: <span class="c-num">4.2</span><br>
+&nbsp;&nbsp;}<br>
+}
+        </div>
+      </div>
+      <div>
+        <div class="arch-title" style="font-size:11px;margin-bottom:12px">// NOTIFICATION_TRIGGER</div>
+        <div class="code-block">
+{<br>
+&nbsp;&nbsp;<span class="c-key">"event_id"</span>: <span class="c-str">"9a8b7c6d-..."</span>,<br>
+&nbsp;&nbsp;<span class="c-key">"event_type"</span>: <span class="c-str">"NOTIFICATION_TRIGGER"</span>,<br>
+&nbsp;&nbsp;<span class="c-key">"source"</span>: <span class="c-str">"crowd-analysis-worker"</span>,<br>
+&nbsp;&nbsp;<span class="c-key">"payload"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"venue_id"</span>: <span class="c-str">"venue_001"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"zone_id"</span>: <span class="c-str">"main_concourse_n"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"notification_type"</span>: <span class="c-str">"zone_critical"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"template_vars"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"alternative_zone"</span>: <span class="c-str">"main_concourse_s"</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;},<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"channels"</span>: [<span class="c-str">"push"</span>, <span class="c-str">"in_app"</span>],<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"expires_at"</span>: <span class="c-str">"2026-04-15T20:10:00Z"</span><br>
+&nbsp;&nbsp;}<br>
+}
+        </div>
+      </div>
+      <div>
+        <div class="arch-title" style="font-size:11px;margin-bottom:12px">// IOT_SENSOR_READING</div>
+        <div class="code-block">
+{<br>
+&nbsp;&nbsp;<span class="c-key">"event_type"</span>: <span class="c-str">"IOT_SENSOR_READING"</span>,<br>
+&nbsp;&nbsp;<span class="c-key">"payload"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"sensor_id"</span>: <span class="c-str">"ir_gate_a_01"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"venue_id"</span>: <span class="c-str">"venue_001"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"zone_id"</span>: <span class="c-str">"entry_gate_a"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"sensor_type"</span>: <span class="c-str">"infrared"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"count"</span>: <span class="c-num">847</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"confidence"</span>: <span class="c-num">0.97</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"timestamp"</span>: <span class="c-str">"2026-04-15T19:45:00Z"</span><br>
+&nbsp;&nbsp;}<br>
+}
+        </div>
+      </div>
+      <div>
+        <div class="arch-title" style="font-size:11px;margin-bottom:12px">// Firestore: venue_density/{venue_id}</div>
+        <div class="code-block">
+{<br>
+&nbsp;&nbsp;<span class="c-key">"venue_id"</span>: <span class="c-str">"venue_001"</span>,<br>
+&nbsp;&nbsp;<span class="c-key">"updated_at"</span>: <span class="c-str">"2026-04-15T19:45:33Z"</span>,<br>
+&nbsp;&nbsp;<span class="c-key">"zones"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"main_concourse_n"</span>: {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"count"</span>: <span class="c-num">2847</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"capacity"</span>: <span class="c-num">3000</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"density_score"</span>: <span class="c-num">0.949</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"density_level"</span>: <span class="c-str">"critical"</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="c-key">"updated_at"</span>: <span class="c-str">"..."</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;}<br>
+}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DEPLOY PANEL ══════════════════════════════════════════════════════════ -->
+<div class="panel" id="panel-deploy">
+  <div class="schema-container" style="max-width:900px">
+    <div class="arch-title">// Deployment Strategy — CI/CD + gcloud</div>
+
+    <div class="specs-grid" style="margin-bottom:24px">
+      <div class="spec-card">
+        <h3>FAILURE HANDLING</h3>
+        <div class="spec-item"><span class="key">Pub/Sub retry</span><span class="val">5x, exp backoff</span></div>
+        <div class="spec-item"><span class="key">Dead letter topic</span><span class="val good">YES — alerting</span></div>
+        <div class="spec-item"><span class="key">Worker idempotency</span><span class="val good">SHA-256 key</span></div>
+        <div class="spec-item"><span class="key">Cold start mitigation</span><span class="val good">min-instances=2</span></div>
+        <div class="spec-item"><span class="key">Circuit breaker</span><span class="val">Firestore retry</span></div>
+      </div>
+      <div class="spec-card">
+        <h3>DEPLOYMENT STRATEGY</h3>
+        <div class="spec-item"><span class="key">Strategy</span><span class="val good">Blue/Green</span></div>
+        <div class="spec-item"><span class="key">Traffic split</span><span class="val">5% → 50% → 100%</span></div>
+        <div class="spec-item"><span class="key">Rollback time</span><span class="val good">&lt;30 seconds</span></div>
+        <div class="spec-item"><span class="key">CI system</span><span class="val">Cloud Build</span></div>
+        <div class="spec-item"><span class="key">Image registry</span><span class="val">Artifact Registry</span></div>
+      </div>
+      <div class="spec-card">
+        <h3>OBSERVABILITY</h3>
+        <div class="spec-item"><span class="key">Logging</span><span class="val good">Cloud Logging</span></div>
+        <div class="spec-item"><span class="key">Metrics</span><span class="val good">Cloud Monitoring</span></div>
+        <div class="spec-item"><span class="key">Tracing</span><span class="val good">Cloud Trace</span></div>
+        <div class="spec-item"><span class="key">Alerting</span><span class="val">P99 &gt; 2s alert</span></div>
+        <div class="spec-item"><span class="key">SLA dashboard</span><span class="val">Grafana (OSS)</span></div>
+      </div>
+    </div>
+
+    <div class="arch-title" style="font-size:11px;margin-bottom:12px">// deploy.sh — Key Commands</div>
+    <div class="code-block" style="font-size:11px">
+<span class="c-muted"># 1. Enable APIs</span><br>
+gcloud services enable run.googleapis.com pubsub.googleapis.com firestore.googleapis.com<br><br>
+<span class="c-muted"># 2. Build & push to Artifact Registry</span><br>
+docker build --platform linux/amd64 -t <span class="c-str">$REGION-docker.pkg.dev/$PROJECT/venueiq/api:latest</span> services/api<br>
+docker push <span class="c-str">$REGION-docker.pkg.dev/$PROJECT/venueiq/api:latest</span><br><br>
+<span class="c-muted"># 3. Deploy API service (public ingress)</span><br>
+gcloud run deploy venueiq-api \<br>
+&nbsp;&nbsp;--image=<span class="c-str">$REGION-docker.pkg.dev/...</span> \<br>
+&nbsp;&nbsp;--min-instances=<span class="c-num">2</span> --max-instances=<span class="c-num">100</span> --concurrency=<span class="c-num">1000</span> \<br>
+&nbsp;&nbsp;--cpu=<span class="c-num">2</span> --memory=<span class="c-str">1Gi</span> --timeout=<span class="c-num">30</span>s \<br>
+&nbsp;&nbsp;--ingress=all --allow-unauthenticated --execution-environment=gen2<br><br>
+<span class="c-muted"># 4. Deploy workers (internal ingress only)</span><br>
+gcloud run deploy venueiq-crowd-worker \<br>
+&nbsp;&nbsp;--ingress=internal --no-allow-unauthenticated \<br>
+&nbsp;&nbsp;--min-instances=<span class="c-num">1</span> --max-instances=<span class="c-num">50</span> --cpu=<span class="c-num">1</span> --memory=<span class="c-str">512Mi</span><br><br>
+<span class="c-muted"># 5. Create Pub/Sub push subscription → worker</span><br>
+gcloud pubsub subscriptions create crowd-analysis-sub \<br>
+&nbsp;&nbsp;--topic=venue-events \<br>
+&nbsp;&nbsp;--push-endpoint=<span class="c-str">$WORKER_URL/pubsub/push</span> \<br>
+&nbsp;&nbsp;--push-auth-service-account=<span class="c-str">$PUBSUB_SA</span> \<br>
+&nbsp;&nbsp;--ack-deadline=<span class="c-num">60</span> --max-delivery-attempts=<span class="c-num">5</span> \<br>
+&nbsp;&nbsp;--dead-letter-topic=venue-events-dead-letter<br><br>
+<span class="c-muted"># 6. Blue/green traffic split for zero-downtime deploys</span><br>
+gcloud run services update-traffic venueiq-api \<br>
+&nbsp;&nbsp;--to-revisions=<span class="c-str">LATEST=5,CURRENT=95</span>  <span class="c-muted"># canary</span><br>
+gcloud run services update-traffic venueiq-api --to-latest  <span class="c-muted"># promote</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Tab Navigation ────────────────────────────────────────────────────────────
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ── Simulation Data ───────────────────────────────────────────────────────────
+const ZONES = [
+  { id: 'main_concourse_n', name: 'Concourse North', capacity: 3000 },
+  { id: 'main_concourse_s', name: 'Concourse South', capacity: 3000 },
+  { id: 'main_concourse_e', name: 'Concourse East',  capacity: 2500 },
+  { id: 'main_concourse_w', name: 'Concourse West',  capacity: 2500 },
+  { id: 'food_court_1',     name: 'Food Court 1',    capacity: 800 },
+  { id: 'food_court_2',     name: 'Food Court 2',    capacity: 800 },
+  { id: 'entry_gate_a',     name: 'Gate A',           capacity: 1200 },
+  { id: 'entry_gate_b',     name: 'Gate B',           capacity: 1200 },
+  { id: 'seating_lower',    name: 'Lower Seating',    capacity: 20000 },
+  { id: 'restroom_block_1', name: 'Restrooms 1',      capacity: 150 },
+];
+
+const QUEUES = [
+  { id: 'food_court_1', name: 'Food Court 1', icon: '🍔', zone: 'Concourse North' },
+  { id: 'food_court_2', name: 'Food Court 2', icon: '🌮', zone: 'Concourse South' },
+  { id: 'entry_gate_a', name: 'Gate A Entry', icon: '🎫', zone: 'North Entry' },
+  { id: 'entry_gate_b', name: 'Gate B Entry', icon: '🎫', zone: 'South Entry' },
+  { id: 'restrooms',    name: 'Restroom Block 1', icon: '🚻', zone: 'East Side' },
+];
+
+let simState = {
+  occupancy: 42000,
+  occupancyDelta: 0,
+  phase: 'pregame', // pregame | halftime | postgame
+  tick: 0,
+  zoneCounts: {},
+  queueTimes: {},
+  health: 78,
+  alerts: 0,
+};
+
+// Initialize zone counts
+ZONES.forEach(z => {
+  const base = z.id.includes('seating') ? 38000 : 
+               z.id.includes('concourse') ? 1800 : 
+               z.id.includes('food') ? 450 : 
+               z.id.includes('gate') ? 350 : 80;
+  simState.zoneCounts[z.id] = Math.min(z.capacity * 0.95, base + Math.random() * 200);
+});
+
+QUEUES.forEach(q => {
+  simState.queueTimes[q.id] = 5 + Math.random() * 8;
+});
+
+function getDensityLevel(count, capacity) {
+  const r = count / capacity;
+  if (r < 0.3) return 'low';
+  if (r < 0.6) return 'moderate';
+  if (r < 0.8) return 'high';
+  return 'critical';
+}
+
+function simTick() {
+  simState.tick++;
+
+  // Simulate halftime rush at tick 60
+  const isHalftime = simState.tick > 60 && simState.tick < 120;
+  const rushFactor = isHalftime ? 1.8 : 1.0;
+
+  // Evolve zone counts
+  ZONES.forEach(z => {
+    const current = simState.zoneCounts[z.id];
+    let noise = (Math.random() - 0.5) * 120 * rushFactor;
+    
+    // During halftime: push people from seating to concourses
+    if (isHalftime) {
+      if (z.id.includes('concourse') || z.id.includes('food')) noise += 200;
+      if (z.id.includes('seating')) noise -= 300;
+    }
+
+    simState.zoneCounts[z.id] = Math.max(0, Math.min(z.capacity * 1.05, current + noise));
+  });
+
+  // Queue times
+  QUEUES.forEach(q => {
+    const curr = simState.queueTimes[q.id];
+    const baseNoise = (Math.random() - 0.45) * 2;
+    const rush = isHalftime && (q.id.includes('food') || q.id === 'restrooms') ? 8 : 0;
+    simState.queueTimes[q.id] = Math.max(1, Math.min(35, curr + baseNoise + rush * 0.2));
+  });
+
+  // Occupancy
+  const prevOcc = simState.occupancy;
+  simState.occupancy = Math.max(30000, Math.min(72000, 
+    simState.occupancy + (Math.random() - 0.4) * 300 * rushFactor));
+  simState.occupancyDelta = simState.occupancy - prevOcc;
+
+  // Health score
+  const criticalZones = ZONES.filter(z => 
+    getDensityLevel(simState.zoneCounts[z.id], z.capacity) === 'critical'
+  ).length;
+  const maxQ = Math.max(...Object.values(simState.queueTimes));
+  simState.health = Math.max(0, 100 - criticalZones * 15 - maxQ * 1.5);
+  simState.alerts = criticalZones + (maxQ > 15 ? 1 : 0);
+}
+
+function renderDensityGrid() {
+  const container = document.getElementById('density-grid');
+  container.innerHTML = '';
+  ZONES.forEach(z => {
+    const count = Math.floor(simState.zoneCounts[z.id]);
+    const level = getDensityLevel(count, z.capacity);
+    const pct = Math.min(100, count / z.capacity * 100);
+    container.innerHTML += `
+      <div class="zone-tile ${level}">
+        <div class="zone-name">${z.name}</div>
+        <div class="zone-count">${count.toLocaleString()}</div>
+        <div class="zone-bar"><div class="zone-fill" style="width:${pct}%"></div></div>
+        <div class="zone-status">${level.toUpperCase()} · ${pct.toFixed(0)}%</div>
+      </div>`;
+  });
+}
+
+function renderQueues() {
+  const container = document.getElementById('queue-list');
+  container.innerHTML = '';
+  const sorted = [...QUEUES].sort((a, b) => simState.queueTimes[b.id] - simState.queueTimes[a.id]);
+  sorted.forEach(q => {
+    const min = simState.queueTimes[q.id].toFixed(1);
+    const cls = min > 15 ? 'bad' : min > 7 ? 'warn' : 'ok';
+    container.innerHTML += `
+      <div class="queue-item">
+        <div class="queue-icon">${q.icon}</div>
+        <div class="queue-info">
+          <div class="queue-name">${q.name}</div>
+          <div class="queue-loc">${q.zone}</div>
+        </div>
+        <div class="queue-time">
+          <div class="queue-minutes ${cls}">${min}</div>
+          <div class="queue-unit">min wait</div>
+        </div>
+      </div>`;
+  });
+}
+
+function renderKPIs() {
+  document.getElementById('kpi-occupancy').textContent = Math.floor(simState.occupancy).toLocaleString();
+  const delta = simState.occupancyDelta;
+  const deltaEl = document.getElementById('kpi-occ-delta');
+  deltaEl.textContent = `${delta > 0 ? '▲' : '▼'} ${Math.abs(Math.floor(delta)).toLocaleString()} this minute`;
+  deltaEl.className = 'kpi-delta ' + (delta > 0 ? 'up' : 'down');
+
+  const maxQ = Math.max(...Object.values(simState.queueTimes));
+  document.getElementById('kpi-queue').innerHTML = `${maxQ.toFixed(0)}<span style="font-size:18px">min</span>`;
+  const qDelta = document.getElementById('kpi-q-delta');
+  qDelta.textContent = maxQ > 15 ? '▲ High wait detected' : '✓ Acceptable';
+  qDelta.className = 'kpi-delta ' + (maxQ > 15 ? 'up' : 'down');
+
+  document.getElementById('kpi-health').textContent = Math.floor(simState.health);
+  document.getElementById('kpi-alerts').textContent = simState.alerts;
+
+  // Ring chart
+  const circumference = 264;
+  const offset = circumference * (1 - simState.health / 100);
+  document.getElementById('health-ring-circle').style.strokeDashoffset = offset;
+  const ringColor = simState.health > 70 ? 'var(--green)' : simState.health > 40 ? 'var(--yellow)' : 'var(--red)';
+  document.getElementById('health-ring-circle').style.stroke = ringColor;
+  document.getElementById('health-ring-num').style.color = ringColor;
+  document.getElementById('health-ring-num').textContent = Math.floor(simState.health);
+}
+
+function renderRecs() {
+  const criticalZones = ZONES
+    .filter(z => getDensityLevel(simState.zoneCounts[z.id], z.capacity) === 'critical')
+    .map(z => z.name);
+  const maxQ = Math.max(...Object.values(simState.queueTimes));
+
+  const recs = [];
+  if (criticalZones.length > 0) {
+    recs.push({ priority: 'urgent', text: `Deploy crowd management → ${criticalZones.slice(0,2).join(', ')}` });
+  }
+  if (maxQ > 15) {
+    recs.push({ priority: 'high', text: 'Open additional service lanes at Food Courts' });
+  }
+  recs.push({ priority: 'medium', text: 'Redirect Gate A traffic via south entrance notifications' });
+
+  document.getElementById('rec-list').innerHTML = recs.map(r => `
+    <div class="rec-item ${r.priority}">
+      <div class="rec-priority">${r.priority.toUpperCase()}</div>
+      ${r.text}
+    </div>`).join('');
+}
+
+// Event log
+const EVENT_TYPES = [
+  ['event', 'USER_LOCATION_UPDATE', 'zone=main_concourse_n'],
+  ['ok', 'QUEUE_ESTIMATE_UPDATED', 'food_court_1 → 8.3min'],
+  ['event', 'IOT_SENSOR_READING', 'gate_a count=847 conf=0.97'],
+  ['warn', 'ZONE_DENSITY_UPDATED', 'main_concourse_n CRITICAL'],
+  ['ok', 'ROUTING_CACHE_UPDATED', 'gate_a→seating precomputed'],
+  ['event', 'SERVICE_REQUEST', 'user=anon_xx type=restroom'],
+  ['ok', 'NOTIFICATION_SENT', 'zone_critical → 1,247 users'],
+  ['warn', 'HALFTIME_SIGNAL', 'ETA 5 minutes — preparing alerts'],
+];
+
+let logLines = [];
+
+function addLogLine() {
+  const now = new Date().toISOString().substr(11, 8);
+  const [type, event, detail] = EVENT_TYPES[Math.floor(Math.random() * EVENT_TYPES.length)];
+  const cls = type === 'warn' ? 'log-warn' : type === 'error' ? 'log-error' : type === 'ok' ? 'log-ok' : 'log-event';
+  logLines.unshift(`<div class="log-line"><span class="log-time">${now}</span><span class="${cls}">${event}</span> ${detail}</div>`);
+  if (logLines.length > 30) logLines.pop();
+  document.getElementById('event-log').innerHTML = logLines.join('');
+}
+
+function updateTime() {
+  const now = new Date();
+  document.getElementById('dash-time').textContent = 
+    `// ${now.toLocaleTimeString()} · WEMBLEY STADIUM · ${Math.floor(simState.occupancy).toLocaleString()} ATTENDEES`;
+}
+
+function fullRender() {
+  simTick();
+  renderDensityGrid();
+  renderQueues();
+  renderKPIs();
+  renderRecs();
+  updateTime();
+  if (Math.random() > 0.4) addLogLine();
+}
+
+// Initial render + start simulation
+fullRender();
+setInterval(fullRender, 2000);
+setInterval(addLogLine, 800);
+</script>
+</body>
+</html>
